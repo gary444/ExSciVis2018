@@ -97,13 +97,25 @@ void main()
     // the traversal loop,
     // termination when the sampling position is outside volume boundarys
     // another termination condition for early ray termination is added
+    
+    int samples_collected = 0;
+    vec4 totals = vec4(0.0,0.0,0.0,0.0);
+    
     while (inside_volume)
     {      
         // get sample
         float s = get_sample_data(sampling_pos);
-
-        // dummy code
-        dst = vec4(sampling_pos, 1.0);
+        
+        samples_collected++;
+        
+        // apply the transfer functions to retrieve color and opacity
+        vec4 color = texture(transfer_texture, vec2(s, s));
+        
+        //accumulate colours
+        totals.r += color.r;
+        totals.g += color.g;
+        totals.b += color.b;
+        totals.a += color.a;
         
         // increment the ray sampling position
         sampling_pos  += ray_increment;
@@ -111,19 +123,28 @@ void main()
         // update the loop termination condition
         inside_volume  = inside_volume_bounds(sampling_pos);
     }
+    
+    //divide by num samples
+    dst = totals/samples_collected * 3.0;
+    
 #endif
     
 #if TASK == 12 || TASK == 13
     // the traversal loop,
     // termination when the sampling position is outside volume boundarys
     // another termination condition for early ray termination is added
+    
+    float min_diff = (1.0/255.0)/2.0;
     while (inside_volume)
     {
         // get sample
         float s = get_sample_data(sampling_pos);
-
-        // dummy code
-        dst = vec4(light_diffuse_color, 1.0);
+        // apply the transfer functions to retrieve color and opacity
+        
+        if (abs(s - iso_value) < min_diff) {
+            dst = texture(transfer_texture, vec2(s, s));
+        }
+        
 
         // increment the ray sampling position
         sampling_pos += ray_increment;

@@ -134,22 +134,53 @@ void main()
     // termination when the sampling position is outside volume boundarys
     // another termination condition for early ray termination is added
     
-    float min_diff = (1.0/255.0)/2.0;
-    while (inside_volume)
+    int iso_int = int(iso_value * 255);
+    
+    bool foundHit = false; // enables first hit by exiting loop when surface found
+    while (inside_volume && foundHit == false)
     {
-        // get sample
-        float s = get_sample_data(sampling_pos);
-        // apply the transfer functions to retrieve color and opacity
+        // get sample, cast to int
+        float density = get_sample_data(sampling_pos);
+        int s = int(density * 255);
         
-        if (abs(s - iso_value) < min_diff) {
-            dst = texture(transfer_texture, vec2(s, s));
+        // apply the transfer functions to retrieve color and opacity
+        if (s == iso_int) {
+            dst = texture(transfer_texture, vec2(density, density));
+            foundHit = true;
         }
         
-
         // increment the ray sampling position
+        vec3 prev_sample_pos = sampling_pos;
         sampling_pos += ray_increment;
+        
 #if TASK == 13 // Binary Search
-        IMPLEMENT;
+        if (!foundHit) {
+            //if this val is below iso value and next value is above...
+            int nextSample = int(get_sample_data(sampling_pos) * 255);
+            if(s < iso_int && nextSample > iso_int){
+                //binary search for position of value equal to iso_int
+                vec3 min = prev_sample_pos;
+                vec3 max = sampling_pos;
+                vec3 midpoint;
+                int foundValue = s;
+                
+                while(foundValue != iso_int){
+                    midpoint = (min+max)/2.0;
+                
+                    foundValue = int(get_sample_data(midpoint) * 255);
+                    if (foundValue > iso_int) {
+                        max = midpoint;
+                    }
+                    else if (foundValue < iso_int){
+                        min = midpoint;
+                    }
+                }
+                dst = texture(transfer_texture, vec2(density, density));
+                foundHit = true;
+             
+            }//end binary search
+        }
+        
 #endif
 #if ENABLE_LIGHTNING == 1 // Add Shading
         IMPLEMENTLIGHT;
